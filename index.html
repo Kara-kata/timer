@@ -1,0 +1,241 @@
+<html><head><base href="." />
+<title>Event Timer & Calendar</title>
+<meta charset="UTF-8">
+<style>
+:root {
+  --primary: #2196F3;
+  --dark: #1976D2;
+  --accent: #FF4081;
+  --text: #212121;
+  --light-bg: #F5F5F5;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background: var(--light-bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.timer-section, .calendar-section {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.timer-display {
+  font-size: 3em;
+  text-align: center;
+  margin: 20px 0;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.timer-controls {
+  display: grid;
+  gap: 10px;
+}
+
+input, button {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: var(--dark);
+}
+
+.calendar {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.calendar th, .calendar td {
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #ddd;
+}
+
+.calendar th {
+  background: var(--primary);
+  color: white;
+}
+
+.event-list {
+  margin-top: 20px;
+}
+
+.event-item {
+  padding: 10px;
+  background: var(--light-bg);
+  margin: 5px 0;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delete-btn {
+  background: var(--accent);
+  padding: 5px 10px;
+  font-size: 0.8em;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="timer-section">
+    <h2>Event Timer</h2>
+    <div class="timer-display" id="timer">00:00:00</div>
+    <div class="timer-controls">
+      <input type="text" id="eventName" placeholder="Event Name">
+      <input type="datetime-local" id="eventDateTime">
+      <button onclick="setTimer()">Set Timer</button>
+      <button onclick="stopTimer()" id="stopBtn" disabled>Stop Timer</button>
+    </div>
+  </div>
+  
+  <div class="calendar-section">
+    <h2>Event Calendar</h2>
+    <div id="calendar"></div>
+    <div class="event-list" id="eventList">
+      <h3>Upcoming Events</h3>
+    </div>
+  </div>
+</div>
+
+<script>
+let timerInterval;
+let events = [];
+
+// Initialize the calendar
+function initCalendar() {
+  const calendar = document.getElementById('calendar');
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  
+  let calendarHTML = '<table class="calendar"><tr>';
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  
+  days.forEach(day => {
+    calendarHTML += `<th>${day}</th>`;
+  });
+  
+  calendarHTML += '</tr><tr>';
+  
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+  
+  for(let i = 0; i < firstDay; i++) {
+    calendarHTML += '<td></td>';
+  }
+  
+  for(let day = 1; day <= daysInMonth; day++) {
+    if((day + firstDay - 1) % 7 === 0) {
+      calendarHTML += '</tr><tr>';
+    }
+    calendarHTML += `<td>${day}</td>`;
+  }
+  
+  calendarHTML += '</tr></table>';
+  calendar.innerHTML = calendarHTML;
+}
+
+function setTimer() {
+  const eventName = document.getElementById('eventName').value;
+  const eventDateTime = new Date(document.getElementById('eventDateTime').value);
+  
+  if(!eventName || !eventDateTime) {
+    alert('Please enter event name and date/time');
+    return;
+  }
+  
+  clearInterval(timerInterval);
+  
+  const event = {
+    name: eventName,
+    datetime: eventDateTime
+  };
+  
+  events.push(event);
+  updateEventList();
+  
+  timerInterval = setInterval(() => {
+    const now = new Date().getTime();
+    const distance = eventDateTime.getTime() - now;
+    
+    if(distance < 0) {
+      clearInterval(timerInterval);
+      document.getElementById('timer').innerHTML = "TIME'S UP!";
+      alert(`Event "${eventName}" time is up!`);
+      return;
+    }
+    
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    document.getElementById('timer').innerHTML = 
+      `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, 1000);
+  
+  document.getElementById('stopBtn').disabled = false;
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('timer').innerHTML = "00:00:00";
+  document.getElementById('stopBtn').disabled = true;
+}
+
+function updateEventList() {
+  const eventList = document.getElementById('eventList');
+  const now = new Date();
+  
+  // Sort events by date
+  events.sort((a, b) => a.datetime - b.datetime);
+  
+  let eventListHTML = '<h3>Upcoming Events</h3>';
+  events.forEach((event, index) => {
+    if(event.datetime > now) {
+      eventListHTML += `
+        <div class="event-item">
+          <span>${event.name} - ${event.datetime.toLocaleString()}</span>
+          <button class="delete-btn" onclick="deleteEvent(${index})">Delete</button>
+        </div>
+      `;
+    }
+  });
+  
+  eventList.innerHTML = eventListHTML;
+}
+
+function deleteEvent(index) {
+  events.splice(index, 1);
+  updateEventList();
+}
+
+// Initialize the calendar when the page loads
+window.onload = initCalendar;
+</script>
+<h2  style="text-align: center;">developed by cyberguru</h2>
+</body></html>
